@@ -1,0 +1,26 @@
+# syntax=docker/dockerfile:1.6
+FROM python:3.11-slim AS base
+
+WORKDIR /app
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+COPY requirements-ui.txt .
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install -r requirements-ui.txt
+
+
+COPY pyproject.toml setup.cfg README.md ./
+COPY pnlkit/ pnlkit/
+
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install .
+
+COPY web-ui.py . 
+
+EXPOSE 8501
+
+HEALTHCHECK CMD curl --fail http://localhost:8501/_stcore/health
+
+ENTRYPOINT ["sh", "-c", "streamlit run web-ui.py --server.port=${PORT:-8501} --server.enableCORS=False --server.address=0.0.0.0"]
